@@ -1,0 +1,12 @@
+{
+    "name": "PromoRepublic/cri-capture-screenshot",
+    "description": "Chrome remote interface screenshot capture.",
+    "scripts": {
+        "post-install-cmd": [
+            "npm install"
+        ],
+        "post-update-cmd": [
+            "npm update"
+        ]
+    }
+}
