@@ -51,8 +51,8 @@ CDP({ host: CDP_HOST, port: CDP_PORT })
               console.log('Page.loadEventFired');
 
               let _out = argv.out ? argv.out : 'out.png';
-              let _extension = _out.split('.').pop();
-                  _extension = _extension == 'jpg' ? 'jpeg' : _extension;
+              let _extension = _out.indexOf('.') !== -1 ? _out.split('.').pop() : '';
+                  _extension = !_extension || _extension == 'jpg' ? 'jpeg' : _extension;
 
               let _captureScreenshotParams = {
                 format: _extension
