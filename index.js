@@ -2,6 +2,7 @@ const util = require("util");
 
 
 const CDP = require('chrome-remote-interface');
+const sharp = require('sharp');
 
 const CDP_HOST = '127.0.0.1';
 const CDP_PORT = 9222;
@@ -16,11 +17,30 @@ const screen_height = argv.height * screen_scale;
 // console.log({width: screen_width, height: screen_height, deviceScaleFactor: screen_scale, mobile: false, fitWindow: false, scale: screen_scale});
 
 //
-function saveScreenshot (base64Data, out_filename) {
-  let _base64_string = base64Data.data.replace(/^data:image\/\w+;base64,/, '');
-  require("fs").writeFile(out_filename, _base64_string, { encoding: 'base64' }, function(err) {
-      console.log(err);
-  });
+function saveScreenshot(base64Data, out_filename) {
+  const _extension = out_filename.indexOf('.') !== -1 ? out_filename.split('.').pop() : '';
+  const _output_type = !_extension || _extension == 'jpg' ? 'jpeg' : _extension;
+
+  const _base64_string = base64Data.data.replace(/^data:image\/\w+;base64,/, '');
+
+  //
+  const img = new Buffer(_base64_string, 'base64');
+                    
+  //
+  const sharpObj = sharp(img);
+  
+  if (screen_scale > 1) {
+    sharpObj.resize(screen_width, screen_height);
+  }
+
+  if (_output_type == 'jpeg') {
+    sharpObj.jpeg({
+      quality: 100,
+      chromaSubsampling: '4:4:4'
+    })
+  }
+  
+  return sharpObj.toFile(out_filename);
 }
 
 //
@@ -51,18 +71,15 @@ CDP({ host: CDP_HOST, port: CDP_PORT })
               console.log('Page.loadEventFired');
 
               let _out = argv.out ? argv.out : 'out.png';
-              let _extension = _out.indexOf('.') !== -1 ? _out.split('.').pop() : '';
-                  _extension = !_extension || _extension == 'jpg' ? 'jpeg' : _extension;
 
               let _captureScreenshotParams = {
-                format: _extension
+                format: 'png'
               };
-              if (_extension === 'jpeg') {
-                _captureScreenshotParams.quality = 85;
-              }
 
               Page.captureScreenshot(_captureScreenshotParams)
-                .then((base64Data) => saveScreenshot(base64Data, _out))
+                .then((base64Data) => {
+                  return saveScreenshot(base64Data, _out);
+                })
                 .then(() => client.close())
                 .then(() => parentTabClient.Target.closeTarget({targetId: targetId}))
                 .then(() => parentTabClient.close());
