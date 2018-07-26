@@ -11,8 +11,10 @@ const CDP_PORT = 9222;
 const argv = require('minimist')(process.argv.slice(2));
 
 const screen_scale = argv.scale ? argv.scale : 1;
-const screen_width = argv.width * screen_scale;
-const screen_height = argv.height * screen_scale;
+const requested_width = argv.width;
+const requested_height = argv.height;
+const screen_width = requested_width * screen_scale;
+const screen_height = requested_height * screen_scale;
 
 // console.log({width: screen_width, height: screen_height, deviceScaleFactor: screen_scale, mobile: false, fitWindow: false, scale: screen_scale});
 
@@ -30,7 +32,7 @@ function saveScreenshot(base64Data, out_filename) {
   const sharpObj = sharp(img);
   
   if (screen_scale > 1) {
-    sharpObj.resize(screen_width, screen_height);
+    sharpObj.resize(requested_width, requested_height);
   }
 
   if (_output_type == 'jpeg') {
