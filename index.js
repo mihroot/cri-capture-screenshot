@@ -7,6 +7,8 @@ const sharp = require('sharp');
 const CDP_HOST = '127.0.0.1';
 const CDP_PORT = 9222;
 
+const _MAX_ALLOWED_PAGE_LOADING_TIME = 10000;
+
 
 const argv = require('minimist')(process.argv.slice(2));
 
@@ -61,22 +63,28 @@ CDP({ host: CDP_HOST, port: CDP_PORT })
           .then(client => {
 
             // extract domains
-            const { Target, Network, Page, Emulation } = client;
+            const { Target/*, Network*/, Page, Runtime, Emulation } = client;
 
             // // setup handlers
             // Network.requestWillBeSent((params) => {
             //     console.log(params.request.url);
             // });
 
-            // Subscribe on Page Loaded event
-            Page.loadEventFired((data) => {
-              console.log('Page.loadEventFired');
 
+            let _afterPageLoaded = () => {
+              if (_loadEventFiredTimeout) {
+                clearTimeout(_loadEventFiredTimeout);
+              }
+              
               let _out = argv.out ? argv.out : 'out.png';
-
               let _captureScreenshotParams = {
-                format: 'png'
+                format: 'png'// output_type
               };
+
+              // if (output_type === 'jpeg') {
+              //   _captureScreenshotParams.quality = 85;
+              // }
+              
 
               Page.captureScreenshot(_captureScreenshotParams)
                 .then((base64Data) => {
@@ -85,11 +93,29 @@ CDP({ host: CDP_HOST, port: CDP_PORT })
                 .then(() => client.close())
                 .then(() => parentTabClient.Target.closeTarget({targetId: targetId}))
                 .then(() => parentTabClient.close());
+            }
+
+            let _loadEventFiredTimeout = setTimeout(() => {
+              console.log('Page.loadEventFired: FAIL');
+              _afterPageLoaded();
+            }, _MAX_ALLOWED_PAGE_LOADING_TIME);
+
+            // // Subscribe on Page Loaded event
+            // Page.loadEventFired((data) => {
+            //   console.log('Page.loadEventFired: SUCCESS');
+            //   _afterPageLoaded();
+            // });
+            Runtime.consoleAPICalled((message) => {
+              if (message.args && message.args[0].type == 'string' && message.args[0].value == 'NAZCA_COMPOSITION_READY') {
+                console.log('Page.consoleAPICalled: SUCCESS');
+                _afterPageLoaded();
+              }
             });
 
             // enable events then start!
             Promise.all([
                 // Network.enable(),
+                Runtime.enable(),
                 Page.enable(),
                 Emulation.setDeviceMetricsOverride({
                     width: screen_width,
