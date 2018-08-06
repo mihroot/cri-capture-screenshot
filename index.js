@@ -4,8 +4,10 @@ const util = require("util");
 const CDP = require('chrome-remote-interface');
 const sharp = require('sharp');
 
-const CDP_HOST = '127.0.0.1';
-const CDP_PORT = 9222;
+const _SERVER_ADDR = {
+  host: '144.76.34.209',
+  port: 9222
+};
 
 const _MAX_ALLOWED_PAGE_LOADING_TIME = 10000;
 
@@ -15,8 +17,8 @@ const argv = require('minimist')(process.argv.slice(2));
 const screen_scale = argv.scale ? argv.scale : 1;
 const requested_width = argv.width;
 const requested_height = argv.height;
-const screen_width = requested_width * screen_scale;
-const screen_height = requested_height * screen_scale;
+const screen_width = requested_width;
+const screen_height = requested_height;
 
 // console.log({width: screen_width, height: screen_height, deviceScaleFactor: screen_scale, mobile: false, fitWindow: false, scale: screen_scale});
 
@@ -48,17 +50,17 @@ function saveScreenshot(base64Data, out_filename) {
 }
 
 //
-CDP({ host: CDP_HOST, port: CDP_PORT })
+CDP(_SERVER_ADDR)
   .then((parentTabClient) => {
     // Create Tab
     return parentTabClient.Target.createTarget({ url: 'about:blank', width: screen_width, height: screen_height })
       .then(({ targetId }) => {
         // Tabs list
-        return CDP.List()
+        return CDP.List(_SERVER_ADDR)
           // Activate Tab
           .then(list => {
             let _url = list.find(target => target.id === targetId).webSocketDebuggerUrl;
-            return CDP({ tab: _url });
+            return CDP(Object.assign({}, _SERVER_ADDR, { tab: _url }));
           })
           .then(client => {
 
