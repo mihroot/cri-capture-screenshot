@@ -133,8 +133,12 @@ CDP(_SERVER_ADDR)
             }).catch((err) => {
                 console.error(err);
                 client.close();
+                parentTabClient.Target.closeTarget({targetId: targetId});
                 parentTabClient.close();
             });
+          }).catch((err) => {
+              console.error(err);
+              parentTabClient.close();
           });
       });
   }).catch('error', (err) => {
