@@ -5,7 +5,7 @@ const CDP = require('chrome-remote-interface');
 const sharp = require('sharp');
 
 const _SERVER_ADDR = {
-  host: '144.76.34.209',
+  host: '195.201.81.72',
   port: 9222
 };
 
