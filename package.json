@@ -1,6 +1,6 @@
 {
   "name": "cri-capture-screenshot",
-  "version": "1.0.0",
+  "version": "1.0.11",
   "description": "Chrome remote interface screenshot capture.",
   "main": "index.js",
   "scripts": {
