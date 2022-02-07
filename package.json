@@ -11,7 +11,7 @@
   "dependencies": {
     "chrome-remote-interface": "^0.18.0",
     "minimist": "^1.2.0",
-    "sharp": "^0.20.5"
+    "sharp": "^0.22.1"
   },
   "private": true
 }
