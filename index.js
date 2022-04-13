@@ -4,7 +4,7 @@ const util = require("util");
 const CDP = require('chrome-remote-interface');
 const sharp = require('sharp');
 
-const _MAX_ALLOWED_PAGE_LOADING_TIME = 10000;
+const _MAX_ALLOWED_PAGE_LOADING_TIME = 5000;
 
 const argv = require('minimist')(process.argv.slice(2));
 
@@ -21,7 +21,13 @@ const SERVER_ADDR = {
   port: server_port
 };
 
-// console.log({width: screen_width, height: screen_height, deviceScaleFactor: screen_scale, mobile: false, fitWindow: false, scale: screen_scale});
+async function cbToPromise(cb) {
+  return new Promise((resolve) => {
+      cb((resp) => {
+          resolve(resp);
+      })
+  });
+}
 
 //
 function saveScreenshot(base64Data, out_filename) {
@@ -66,7 +72,7 @@ CDP(SERVER_ADDR)
           .then(client => {
 
             // extract domains
-            const { Target/*, Network*/, Page, Runtime, Emulation } = client;
+            const { Target/*, Network*/, Page, LayerTree, Runtime, Emulation } = client;
 
             // // setup handlers
             // Network.requestWillBeSent((params) => {
@@ -75,9 +81,9 @@ CDP(SERVER_ADDR)
 
 
             let _afterPageLoaded = () => {
-              if (_loadEventFiredTimeout) {
-                clearTimeout(_loadEventFiredTimeout);
-              }
+//               if (_loadEventFiredTimeout) {
+//                 clearTimeout(_loadEventFiredTimeout);
+//               }
               
               let _out = argv.out ? argv.out : 'out.png';
               let _captureScreenshotParams = {
@@ -98,28 +104,29 @@ CDP(SERVER_ADDR)
                 .then(() => parentTabClient.close());
             }
 
-            let _loadEventFiredTimeout = setTimeout(() => {
-              console.log('Page.loadEventFired: FAIL');
-              _afterPageLoaded();
-            }, _MAX_ALLOWED_PAGE_LOADING_TIME);
+//             let _loadEventFiredTimeout = setTimeout(() => {
+//               console.log('Page.loadEventFired: FAIL');
+//               _afterPageLoaded();
+//             }, _MAX_ALLOWED_PAGE_LOADING_TIME);
 
             // // Subscribe on Page Loaded event
             // Page.loadEventFired((data) => {
             //   console.log('Page.loadEventFired: SUCCESS');
             //   _afterPageLoaded();
             // });
-            Runtime.consoleAPICalled((message) => {
-              if (message.args && message.args[0].type == 'string' && message.args[0].value == 'NAZCA_COMPOSITION_READY') {
-                console.log('Page.consoleAPICalled: SUCCESS');
-                _afterPageLoaded();
-              }
-            });
+//             Runtime.consoleAPICalled((message) => {
+//               if (message.args && message.args[0].type == 'string' && message.args[0].value == 'NAZCA_COMPOSITION_READY') {
+//                 console.log('Page.consoleAPICalled: SUCCESS');
+//                 _afterPageLoaded();
+//               }
+//             });
 
             // enable events then start!
             Promise.all([
                 // Network.enable(),
                 Runtime.enable(),
                 Page.enable(),
+                LayerTree.enable(),
                 Emulation.setDeviceMetricsOverride({
                     width: screen_width,
                     height: screen_height,
@@ -130,8 +137,36 @@ CDP(SERVER_ADDR)
                   }),
                 // Emulation.setVisibleSize({width: screen_width, height: screen_height})
             ]).then(() => {
-                return Page.navigate({ url: argv.url });
-            }).catch((err) => {
+                return Page.navigate({ url: requested_url });
+              })
+              .then(() => {
+                return Emulation.setVirtualTimePolicy({policy: 'pauseIfNetworkFetchesPending', budget: _MAX_ALLOWED_PAGE_LOADING_TIME});
+              })
+              .then(() => {
+                // console.log('Page navigated');
+                return cbToPromise(Page.loadEventFired);
+              })
+              .then(() => {
+                // console.log('Page loaded');
+                return cbToPromise(Emulation.virtualTimeBudgetExpired);
+              })
+              .then(() => {
+                // console.log('JS loaded');
+                return new Promise((resolve) => {
+                  setTimeout(resolve, _MAX_ALLOWED_PAGE_LOADING_TIME); // max waiting time
+                  let timeout = setTimeout(resolve, 100);
+                  LayerTree.layerPainted(() => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(resolve, 100);
+                  });
+                });
+              })
+              .then(() => {
+                // console.log('animation loaded');
+                _afterPageLoaded();
+                return true;
+              })
+              .catch((err) => {
                 console.error(err);
                 client.close();
                 parentTabClient.Target.closeTarget({targetId: targetId});
