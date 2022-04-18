@@ -137,7 +137,7 @@ CDP(SERVER_ADDR)
                   }),
                 // Emulation.setVisibleSize({width: screen_width, height: screen_height})
             ]).then(() => {
-                return Page.navigate({ url: requested_url });
+                return Page.navigate({ url: argv.url });
               })
               .then(() => {
                 return Emulation.setVirtualTimePolicy({policy: 'pauseIfNetworkFetchesPending', budget: _MAX_ALLOWED_PAGE_LOADING_TIME});
