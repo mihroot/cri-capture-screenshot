@@ -4,7 +4,7 @@ const util = require("util");
 const CDP = require('chrome-remote-interface');
 const sharp = require('sharp');
 
-const _MAX_ALLOWED_PAGE_LOADING_TIME = 5000;
+const _MAX_ALLOWED_PAGE_LOADING_TIME = 10000;
 
 const argv = require('minimist')(process.argv.slice(2));
 
