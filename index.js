@@ -74,52 +74,23 @@ CDP(SERVER_ADDR)
             // extract domains
             const { Target/*, Network*/, Page, LayerTree, Runtime, Emulation } = client;
 
-            // // setup handlers
-            // Network.requestWillBeSent((params) => {
-            //     console.log(params.request.url);
-            // });
-
-
-            let _afterPageLoaded = () => {
-//               if (_loadEventFiredTimeout) {
-//                 clearTimeout(_loadEventFiredTimeout);
-//               }
-              
+            let _afterPageLoaded = () => {              
               let _out = argv.out ? argv.out : 'out.png';
               let _captureScreenshotParams = {
                 format: 'png'// output_type
               };
 
-              // if (output_type === 'jpeg') {
-              //   _captureScreenshotParams.quality = 85;
-              // }
-              
-
-              Page.captureScreenshot(_captureScreenshotParams)
+              // let's wait 1 sec more
+              setTimeout(function() {
+                Page.captureScreenshot(_captureScreenshotParams)
                 .then((base64Data) => {
                   return saveScreenshot(base64Data, _out);
                 })
                 .then(() => client.close())
                 .then(() => parentTabClient.Target.closeTarget({targetId: targetId}))
                 .then(() => parentTabClient.close());
+              }, 1000);
             }
-
-//             let _loadEventFiredTimeout = setTimeout(() => {
-//               console.log('Page.loadEventFired: FAIL');
-//               _afterPageLoaded();
-//             }, _MAX_ALLOWED_PAGE_LOADING_TIME);
-
-            // // Subscribe on Page Loaded event
-            // Page.loadEventFired((data) => {
-            //   console.log('Page.loadEventFired: SUCCESS');
-            //   _afterPageLoaded();
-            // });
-//             Runtime.consoleAPICalled((message) => {
-//               if (message.args && message.args[0].type == 'string' && message.args[0].value == 'NAZCA_COMPOSITION_READY') {
-//                 console.log('Page.consoleAPICalled: SUCCESS');
-//                 _afterPageLoaded();
-//               }
-//             });
 
             // enable events then start!
             Promise.all([
